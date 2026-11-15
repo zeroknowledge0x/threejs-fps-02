@@ -3,16 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Greybox Range: a three.js FPS starter</title>
+<title>Harbor Line: a three.js tactical FPS</title>
 <style>
-  /* Look plan: canvas, surface, hairline, ink, muted and one accent. Every colour below is one of the six. */
+  /* Look plan: canvas, surface, hairline, ink, muted and one amber accent, plus the two team
+     tints. Every colour below is one of those eight, and the lights make the rest of the shades. */
   :root {
-    --canvas: #14161a;
-    --surface: #1e2228;
-    --hairline: #2c323a;
-    --ink: #e9e6df;
-    --muted: #98a0a8;
-    --accent: #f0a830;
+    --canvas: #161c22;
+    --surface: #2b333d;
+    --hairline: #3d4854;
+    --ink: #e7e3d9;
+    --muted: #9aa6b2;
+    --accent: #f2a63c;
+    --tide: #4f9ed6;
+    --salt: #d0603f;
     --radius-panel: 4px;
     --radius-control: 8px;
     --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -29,6 +32,7 @@
   }
   #game, #game canvas { position: fixed; inset: 0; display: block; }
   #hud { position: fixed; inset: 0; pointer-events: none; }
+  #hud [hidden] { display: none; }
 
   #crosshair { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); }
   #crosshair i { position: absolute; background: var(--ink); opacity: .85; }
@@ -45,6 +49,52 @@
   #hitmarker i:nth-child(3) { top: 12px; left: 0; height: 2px; width: 8px; }
   #hitmarker i:nth-child(4) { top: 12px; right: 0; height: 2px; width: 8px; }
 
+  #topbar {
+    position: fixed;
+    left: 50%;
+    top: 18px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 8px 16px;
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-panel);
+    font-family: var(--font-readout);
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  #topbar b { color: var(--ink); font-weight: 500; }
+  #scoreline { display: flex; gap: 8px; align-items: baseline; font-size: 18px; }
+  #scoreline .tide { color: var(--tide); }
+  #scoreline .salt { color: var(--salt); }
+  #timer { min-width: 52px; text-align: center; color: var(--ink); }
+  #timer.low { color: var(--accent); }
+
+  #bombstate {
+    position: fixed;
+    left: 50%;
+    top: 62px;
+    transform: translateX(-50%);
+    padding: 4px 12px;
+    background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-panel);
+    font-family: var(--font-readout);
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  #vitals { position: fixed; left: 32px; bottom: 24px; display: grid; gap: 6px; }
+  #health { font-family: var(--font-readout); font-size: 34px; line-height: 1; color: var(--ink); }
+  #health span { font-size: 14px; color: var(--muted); margin-left: 6px; }
+  #health-bar { width: 148px; height: 4px; background: var(--hairline); }
+  #health-fill { display: block; height: 100%; width: 100%; background: var(--ink); transition: width 120ms linear; }
+  #health.hurt { color: var(--salt); }
+  #health.hurt + #health-bar #health-fill { background: var(--salt); }
+
   #ammo {
     position: fixed;
     right: 32px;
@@ -60,16 +110,75 @@
   }
   #ammo.empty #ammo-mag { color: var(--accent); }
   #ammo-reserve { font-size: 16px; letter-spacing: -0.01em; color: var(--muted); }
-
-  #score {
+  #weapon-name {
     position: fixed;
-    left: 32px;
-    bottom: 24px;
+    right: 32px;
+    bottom: 92px;
     font-family: var(--font-readout);
-    font-size: 14px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--muted);
   }
-  #score b { color: var(--ink); font-weight: 500; }
+
+  #money {
+    position: fixed;
+    right: 32px;
+    top: 24px;
+    font-family: var(--font-readout);
+    font-size: 16px;
+    color: var(--accent);
+  }
+
+  #killfeed { position: fixed; right: 32px; top: 66px; display: grid; gap: 4px; font-family: var(--font-readout); font-size: 12px; color: var(--muted); text-align: right; }
+  #killfeed b { font-weight: 500; }
+  #killfeed .tide { color: var(--tide); }
+  #killfeed .salt { color: var(--salt); }
+
+  #hint {
+    position: fixed;
+    left: 50%;
+    bottom: 128px;
+    transform: translateX(-50%);
+    font-family: var(--font-readout);
+    font-size: 13px;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    padding: 6px 12px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-panel);
+  }
+
+  #damage { position: fixed; inset: 0; opacity: 0; background: radial-gradient(circle at 50% 50%, transparent 42%, color-mix(in srgb, var(--salt) 60%, transparent) 100%); transition: opacity 240ms ease-out; }
+
+  #buy {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--canvas) 55%, transparent);
+    pointer-events: auto;
+  }
+  #buy .panel { width: min(520px, 100%); }
+  #buy-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  #buy-list li {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-panel);
+    font-family: var(--font-readout);
+    font-size: 14px;
+  }
+  #buy-list li.owned { border-color: var(--accent); color: var(--accent); }
+  #buy-list li.poor { opacity: .4; }
+  #buy-list li i { font-style: normal; color: var(--muted); font-size: 12px; }
+  #buy-list li span { color: var(--ink); }
+  .panel h2 { margin: 0 0 4px; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; }
+  .panel p.hintline { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
 
   .overlay {
     position: fixed;
@@ -78,6 +187,7 @@
     place-items: center;
     padding: 24px;
     background: color-mix(in srgb, var(--canvas) 86%, transparent);
+    pointer-events: auto;
   }
   .overlay[hidden] { display: none; }
   .panel {
@@ -140,7 +250,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    #hitmarker, #play { transition-duration: 0.01ms; }
+    #hitmarker, #play, #damage, #health-fill { transition-duration: 0.01ms; }
   }
 </style>
 </head>
@@ -150,14 +260,35 @@
 <div id="hud" aria-hidden="true">
   <div id="crosshair"><i></i><i></i><i></i><i></i></div>
   <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+  <div id="topbar">
+    <span id="round">Round <b id="round-value">1</b></span>
+    <span id="timer">1:40</span>
+    <span id="scoreline"><b class="tide" id="tide-score">0</b><span>:</span><b class="salt" id="salt-score">0</b></span>
+  </div>
+  <div id="bombstate" hidden>Charge planted</div>
+  <div id="vitals">
+    <div id="health">100<span>HP</span></div>
+    <div id="health-bar"><i id="health-fill"></i></div>
+  </div>
+  <div id="weapon-name">Sounder</div>
   <div id="ammo"><span id="ammo-mag">30</span><span id="ammo-reserve">/ 90</span></div>
-  <div id="score">Score <b id="score-value">0</b></div>
+  <div id="money">$800</div>
+  <div id="killfeed"></div>
+  <div id="hint" hidden>Hold E to plant</div>
+  <div id="damage"></div>
+  <div id="buy" hidden>
+    <section class="panel" role="dialog" aria-modal="true" aria-labelledby="buy-title">
+      <h2 id="buy-title">Buy phase</h2>
+      <p class="hintline">Pick with 1-6 or click. Press B when you are done.</p>
+      <ul id="buy-list"></ul>
+    </section>
+  </div>
 </div>
 
 <div id="overlay" class="overlay">
   <section class="panel" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
-    <h1 id="overlay-title">Greybox Range</h1>
-    <p id="overlay-copy">A plain room, one rifle and four targets. Click to play.</p>
+    <h1 id="overlay-title">Harbor Line</h1>
+    <p id="overlay-copy">Dusk at the fish market. Tide squad attacks, Salt holds the sites. Click to play.</p>
     <button id="play" type="button">Click to play</button>
     <ul class="keys">
       <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</li>
@@ -165,7 +296,9 @@
       <li><kbd>Click</kbd> Fire</li>
       <li><kbd>R</kbd> Reload</li>
       <li><kbd>Ctrl</kbd> Crouch</li>
-      <li><kbd>Space</kbd> Jump</li>
+      <li><kbd>B</kbd> Buy in the buy phase</li>
+      <li><kbd>E</kbd> Hold to plant the charge</li>
+      <li><kbd>G</kbd> Throw the frag</li>
     </ul>
   </section>
 </div>

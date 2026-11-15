@@ -25,6 +25,7 @@ export function createPlayer(colliders) {
     onGround: true,
     crouching: false,
     height: STAND_HEIGHT,
+    alive: true,
   };
   const probe = new THREE.Box3();
   const wish = new THREE.Vector3();
@@ -116,6 +117,16 @@ export function createPlayer(colliders) {
     step,
     look,
     recoil,
+    alive() {
+      return player.alive;
+    },
+    setAlive(value) {
+      player.alive = value;
+      if (!value) player.velocity.set(0, 0, 0);
+    },
+    crouching() {
+      return player.crouching;
+    },
     groundSpeed() {
       return Math.hypot(player.velocity.x, player.velocity.z);
     },

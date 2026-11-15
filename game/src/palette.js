@@ -1,15 +1,16 @@
-// The look plan, in one place. Six values and one accent hue; the lighting makes every
-// shade the game needs, so no other colour appears in the code. The same six names are
-// the CSS custom properties in index.html.
+// The look plan, in one place: a dusk fish-market palette. Six greys and one amber accent;
+// the lights do the work, so the geometry introduces no other hue. index.html repeats these
+// names as CSS custom properties, and TEAM tints the two sides' markers only.
 export const PALETTE = {
-  canvas: '#14161a',
-  surface: '#1e2228',
-  hairline: '#2c323a',
-  ink: '#e9e6df',
-  muted: '#98a0a8',
-  accent: '#f0a830',
+  canvas: '#161c22',
+  surface: '#2b333d',
+  hairline: '#3d4854',
+  ink: '#e7e3d9',
+  muted: '#9aa6b2',
+  accent: '#f2a63c',
 };
 
-export function shade(name) {
-  return PALETTE[name];
-}
+export const TEAM = {
+  tide: '#4f9ed6',
+  salt: '#d0603f',
+};
