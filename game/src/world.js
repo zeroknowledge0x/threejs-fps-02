@@ -62,6 +62,19 @@ const PAINT = [
   [5.4, 0.02, 4.6, 14, 0.02, -10, 'accent'],
 ];
 
+// Trim: ceiling lines and the two site boards. Nothing here collides with a body, and each board
+// hangs off a ceiling beam, so it reads as a sign over the site's mouth rather than a block in
+// mid-air.
+const TRIMS = [
+  [40.6, 0.3, 0.5, 0, 4.4, -6.5, 'hairline'],
+  [40.6, 0.3, 0.5, 0, 4.4, -13.5, 'hairline'],
+  [40.6, 0.3, 0.5, 0, 4.4, 9.5, 'hairline'],
+  [0.5, 0.3, 36.6, -13.5, 4.4, 0, 'hairline'],
+  [0.5, 0.3, 36.6, 13.5, 4.4, 0, 'hairline'],
+  [3.8, 1.2, 0.3, -14, 3.6, -6.5, 'accent'],
+  [3.8, 1.2, 0.3, 14, 3.6, -6.5, 'accent'],
+];
+
 const LAMPS = [
   [-14, 3.4, -13.2],
   [-14, 3.4, -6.8],
@@ -114,7 +127,7 @@ export function createWorld(scene) {
     });
   }
   materials.accent.emissive = new THREE.Color(PALETTE.accent);
-  materials.accent.emissiveIntensity = 0.25;
+  materials.accent.emissiveIntensity = 0.14;
 
   const colliders = [];
   const shootables = [];
@@ -130,7 +143,18 @@ export function createWorld(scene) {
     return mesh;
   }
 
+  // Trim: the pieces that are looked at, never bumped into. They sit out of body height (beams
+  // overhead, boards on a wall) so nothing the bodies do needs them as a collider, and they cast
+  // no shadow, which keeps the one shadow map on the map itself.
+  function trim(width, height, depth, x, y, z, material) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), materials[material]);
+    mesh.position.set(x, y, z);
+    group.add(mesh);
+    return mesh;
+  }
+
   for (const spec of BOXES) solid(...spec);
+  for (const spec of TRIMS) trim(...spec);
   for (const spec of PAINT) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(spec[0], spec[1], spec[2]), materials[spec[6]]);
     mesh.position.set(spec[3], spec[4], spec[5]);
@@ -148,18 +172,18 @@ export function createWorld(scene) {
     const bulb = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.14, 0.4), materials.accent);
     bulb.position.set(x, y, z);
     group.add(bulb);
-    const light = new THREE.PointLight(new THREE.Color(PALETTE.accent), 22, 19, 2);
+    const light = new THREE.PointLight(new THREE.Color(PALETTE.accent), 16, 26, 2);
     light.position.set(x, y - 0.2, z);
     scene.add(light);
   }
 
-  const ambient = new THREE.AmbientLight(new THREE.Color(PALETTE.muted), 0.45);
+  const ambient = new THREE.AmbientLight(new THREE.Color(PALETTE.muted), 0.7);
   scene.add(ambient);
 
-  const sky = new THREE.HemisphereLight(new THREE.Color(PALETTE.muted), new THREE.Color(PALETTE.surface), 3.1);
+  const sky = new THREE.HemisphereLight(new THREE.Color(PALETTE.muted), new THREE.Color(PALETTE.surface), 4.2);
   scene.add(sky);
 
-  const key = new THREE.DirectionalLight(new THREE.Color(PALETTE.ink), 3.2);
+  const key = new THREE.DirectionalLight(new THREE.Color(PALETTE.ink), 3.0);
   key.position.set(12, 18, 10);
   key.target.position.set(0, 0, -2);
   key.castShadow = true;
@@ -172,7 +196,7 @@ export function createWorld(scene) {
   key.shadow.bias = -0.0006;
   scene.add(key, key.target);
 
-  const fill = new THREE.DirectionalLight(new THREE.Color(PALETTE.muted), 1.4);
+  const fill = new THREE.DirectionalLight(new THREE.Color(PALETTE.muted), 2.2);
   fill.position.set(-10, 11, 12);
   scene.add(fill);
 

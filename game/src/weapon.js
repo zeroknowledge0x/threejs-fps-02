@@ -32,8 +32,26 @@ export const GEAR = {
   frag: { name: 'Frag', price: 300, kind: 'gear' },
 };
 
-const MUZZLE_TIME = 0.06;
+const MUZZLE_TIME = 0.09;
 const MOVE_REFERENCE = 5.2;
+
+// A soft round glow, drawn once: white at the middle, nothing at the rim. Used as the muzzle
+// flash's map so the flash is light rather than a flat block of colour.
+function glowTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 32;
+  const paint = canvas.getContext('2d');
+  const ramp = paint.createRadialGradient(16, 16, 0, 16, 16, 16);
+  ramp.addColorStop(0, 'rgba(255,255,255,1)');
+  ramp.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+  ramp.addColorStop(1, 'rgba(255,255,255,0)');
+  paint.fillStyle = ramp;
+  paint.fillRect(0, 0, 32, 32);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
 
 export function createWeapon(camera) {
   const gripMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(PALETTE.hairline), roughness: 0.7, metalness: 0.2 });
@@ -43,14 +61,31 @@ export function createWeapon(camera) {
   const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), bodyMaterial);
   const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), gripMaterial);
   const stock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), gripMaterial);
-  model.add(receiver, barrel, stock);
-  model.position.set(0.3, -0.24, -0.52);
+  // Two gloved hands on the gun. They are the whole difference between a floating box and a
+  // weapon the player is holding, which is what a screenshot of the view has to read as.
+  const gloveMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(PALETTE.surface), roughness: 0.8, metalness: 0.05 });
+  const gripHand = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.16, 0.12), gloveMaterial);
+  gripHand.position.set(0.03, -0.11, 0.04);
+  const foreHand = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.14, 0.13), gloveMaterial);
+  foreHand.position.set(0.03, -0.1, -0.18);
+  model.add(receiver, barrel, stock, gripHand, foreHand);
+  model.position.set(0.3, -0.19, -0.52);
   model.scale.setScalar(1.7);
   camera.add(model);
 
+  // The muzzle flash is a soft glow, not a square: a small radial ramp drawn at boot (no asset to
+  // load) reads as light leaving the barrel instead of a flat block pasted over the frame.
   const flash = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.24, 0.24),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(PALETTE.accent), transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }),
+    new THREE.PlaneGeometry(0.22, 0.22),
+    new THREE.MeshBasicMaterial({
+      map: glowTexture(),
+      color: new THREE.Color(PALETTE.accent),
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    }),
   );
   flash.position.set(0.24, -0.18, -0.95);
   flash.visible = false;
@@ -95,8 +130,7 @@ export function createWeapon(camera) {
     model.position.z = -0.42 + state.kick;
     model.rotation.x = state.kick * 2.2;
     flash.visible = state.flash > 0;
-    flash.rotation.z = state.flash * 30;
-    flashLight.intensity = state.flash > 0 ? 18 : 0;
+    flashLight.intensity = state.flash > 0 ? 7 : 0;
     if (state.reloadLeft > 0) {
       const def = WEAPONS[state.key];
       state.reloadLeft = Math.max(0, state.reloadLeft - dt);

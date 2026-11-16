@@ -34,12 +34,12 @@
   #hud { position: fixed; inset: 0; pointer-events: none; }
   #hud [hidden] { display: none; }
 
-  #crosshair { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); }
-  #crosshair i { position: absolute; background: var(--ink); opacity: .85; }
-  #crosshair i:nth-child(1) { left: 10px; top: 0; width: 2px; height: 7px; }
-  #crosshair i:nth-child(2) { left: 10px; bottom: 0; width: 2px; height: 7px; }
-  #crosshair i:nth-child(3) { top: 10px; left: 0; height: 2px; width: 7px; }
-  #crosshair i:nth-child(4) { top: 10px; right: 0; height: 2px; width: 7px; }
+  #crosshair { position: fixed; left: 50%; top: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%); }
+  #crosshair i { position: absolute; background: var(--ink); opacity: .95; box-shadow: 0 0 2px var(--canvas); }
+  #crosshair i:nth-child(1) { left: 12px; top: 0; width: 2px; height: 9px; }
+  #crosshair i:nth-child(2) { left: 12px; bottom: 0; width: 2px; height: 9px; }
+  #crosshair i:nth-child(3) { top: 12px; left: 0; height: 2px; width: 9px; }
+  #crosshair i:nth-child(4) { top: 12px; right: 0; height: 2px; width: 9px; }
 
   #hitmarker { position: fixed; left: 50%; top: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%) rotate(45deg); opacity: 0; transition: opacity 90ms linear; }
   #hitmarker.on { opacity: 1; }
@@ -156,7 +156,7 @@
     inset: 0;
     display: grid;
     place-items: center;
-    background: color-mix(in srgb, var(--canvas) 55%, transparent);
+    background: color-mix(in srgb, var(--canvas) 34%, transparent);
     pointer-events: auto;
   }
   #buy .panel { width: min(520px, 100%); }
@@ -186,7 +186,12 @@
     display: grid;
     place-items: center;
     padding: 24px;
-    background: color-mix(in srgb, var(--canvas) 86%, transparent);
+    /* Dark at the top and bottom, lighter where the card sits, so the round behind the card is
+       still part of the picture rather than a black screen. */
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--canvas) 72%, transparent),
+      color-mix(in srgb, var(--canvas) 30%, transparent) 52%,
+      color-mix(in srgb, var(--canvas) 76%, transparent));
     pointer-events: auto;
   }
   .overlay[hidden] { display: none; }
@@ -196,6 +201,7 @@
     background: var(--surface);
     border: 1px solid var(--hairline);
     border-radius: var(--radius-panel);
+    box-shadow: 0 14px 44px color-mix(in srgb, var(--canvas) 78%, transparent);
   }
   .panel h1 {
     margin: 0 0 8px;

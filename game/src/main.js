@@ -41,9 +41,29 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.getElementById('game').appendChild(renderer.domElement);
 
+// The sky is painted once at boot from the palette alone: a dusk ramp, dark overhead and lifting
+// to the haze at the horizon, so the fog and the far walls meet a sky of the same family. It is
+// drawn by code, so the entry ships no image for it.
+function duskSky() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 4;
+  canvas.height = 256;
+  const paint = canvas.getContext('2d');
+  const ramp = paint.createLinearGradient(0, 0, 0, canvas.height);
+  ramp.addColorStop(0, PALETTE.canvas);
+  ramp.addColorStop(0.55, PALETTE.surface);
+  ramp.addColorStop(0.86, PALETTE.hairline);
+  ramp.addColorStop(1, PALETTE.surface);
+  paint.fillStyle = ramp;
+  paint.fillRect(0, 0, canvas.width, canvas.height);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(PALETTE.canvas);
-scene.fog = new THREE.Fog(new THREE.Color(PALETTE.canvas), 26, 72);
+scene.background = duskSky();
+scene.fog = new THREE.Fog(new THREE.Color(PALETTE.surface), 34, 140);
 const camera = new THREE.PerspectiveCamera(76, window.innerWidth / window.innerHeight, 0.05, 140);
 scene.add(camera);
 
@@ -456,6 +476,8 @@ function step(dt) {
   }
 
   // Bomb clock and the plant hint are HUD facts derived from the round, never a second timer.
+  // The round clock is the round's own countdown, whichever phase it is serving.
+  hud.setTimer(rounds.state.timer, rounds.state.phase === 'live' && rounds.state.timer <= 20);
   const bomb = rounds.state.bomb;
   if (bomb.planted) {
     hud.setBomb(`Charge at ${bomb.site}: ${Math.ceil(bomb.timer)}s`);
@@ -467,6 +489,9 @@ function step(dt) {
 }
 
 function frame(now) {
+  // A shot renders its two frames itself and then stops: nothing is drawn after them, so the
+  // camera's page is a still, and capturing it costs the machine nothing more.
+  if (shot && frozen) return;
   requestAnimationFrame(frame);
   const dt = Math.min((now - lastTime) / 1000, 0.1);
   lastTime = now;
@@ -520,42 +545,78 @@ function poseBots(list) {
 }
 
 function runShot(name) {
+  // Frozen from the first line: the preset below poses the round by stepping it directly, so the
+  // frame a camera catches later is the frame the preset set, however slow the machine is.
+  frozen = true;
   hud.hideOverlay();
   hud.closeBuy();
   hud.setBomb(null);
   beginRound();
-  if (name === 'start') {
-    openBuy();
-    settle(30);
-  } else if (name === 'play') {
-    body.position.set(-5.2, 0, 6.4);
-    body.yaw = 0.12;
+  // The buy phase is run out first, so a posed frame is a live round with its clock running.
+  const toLive = () => settle(780);
+  if (name === 'title') {
+    // The opening card, with the mid hall behind it: the two squads are already walking it, so
+    // the card is not pasted over a still.
+    body.position.set(-5.4, 0, 6.4);
     poseBots([
-      { team: 'salt', slot: 0, x: -5.6, z: -2.2, yaw: 0 },
-      { team: 'salt', slot: 1, x: -10.2, z: -3.4, yaw: 0.5 },
-      { team: 'tide', slot: 1, x: -7.4, z: 3.4, yaw: 0.05 },
-      { team: 'tide', slot: 2, x: -1.4, z: 4.2, yaw: -0.2 },
+      { team: 'tide', slot: 1, x: -5.8, z: 3.2, yaw: 0.05 },
+      { team: 'tide', slot: 2, x: -4.4, z: 4.6, yaw: -0.1 },
+      { team: 'salt', slot: 0, x: -5.0, z: -5.6, yaw: 3.1 },
+      { team: 'salt', slot: 2, x: -3.4, z: -7.6, yaw: -3.0 },
     ]);
     settle(20);
-    aimAt(-5.6, 1.4, -2.2);
-    for (let burst = 0; burst < 3; burst += 1) {
+    aimAt(-5.0, 1.5, -5.6);
+    hud.showOverlay('start');
+  } else if (name === 'play') {
+    // The cover: the west quay, a defender in front of the lit site board, our burst in the air.
+    toLive();
+    body.position.set(-15.4, 0, 3.4);
+    body.pitch = 0;
+    poseBots([
+      { team: 'salt', slot: 1, x: -14.4, z: -7.0, yaw: 3.0 },
+      { team: 'salt', slot: 2, x: -12.6, z: -10.6, yaw: 2.4 },
+      { team: 'tide', slot: 1, x: -16.8, z: -1.0, yaw: 0.1 },
+      { team: 'tide', slot: 2, x: -15.9, z: -11.4, yaw: -0.1 },
+    ]);
+    settle(20);
+    aimAt(-14.4, 1.35, -7.0);
+    body.pitch += 0.05;
+    for (let burst = 0; burst < 2; burst += 1) {
       shoot();
-      settle(6);
-      aimAt(-5.6 + (random() - 0.5) * 0.5, 1.2, -2.2);
+      settle(5);
+      aimAt(-14.4 + (random() - 0.5) * 0.3, 1.3, -7.0);
     }
+    shoot();
     settle(1);
   } else if (name === 'plant') {
-    body.position.set(-14.4, 0, -7.2);
+    // Stepped back onto the lane mouth, so the site, its board and the charge are all in frame.
+    toLive();
+    body.position.set(-12.2, 0, -3.4);
     poseBots([
-      { team: 'salt', slot: 1, x: -9.4, z: -11.4, yaw: 0.9 },
-      { team: 'tide', slot: 1, x: -12.6, z: -5.4, yaw: 0.2 },
+      { team: 'salt', slot: 1, x: -8.6, z: -12.8, yaw: 0.9 },
+      { team: 'tide', slot: 1, x: -13.4, z: -6.6, yaw: 0.15 },
     ]);
     rounds.plant(-14, 0, 'A', []);
     charge.visible = true;
-    charge.position.set(-14, 0.1, -9);
+    charge.position.set(-14, 0.1, -10);
     hud.setBomb('Charge planted at A');
-    aimAt(-14, 0.6, -9);
+    aimAt(-14, 0.9, -9.8);
     settle(24);
+  } else if (name === 'lost') {
+    // The other ending, posed at B: Salt held it, and the card offers the next round.
+    toLive();
+    body.position.set(12.4, 0, -1.2);
+    poseBots([
+      { team: 'salt', slot: 2, x: 14.0, z: -7.4, yaw: 2.9 },
+      { team: 'salt', slot: 1, x: 11.6, z: -9.6, yaw: 2.3 },
+      { team: 'tide', slot: 1, x: 13.4, z: -2.4, yaw: 0.1 },
+    ]);
+    rounds.state.score.tide = 1;
+    rounds.state.score.salt = 3;
+    hud.setScore(1, 3);
+    settle(16);
+    aimAt(14, 1.4, -8.0);
+    hud.showOverlay('lost', 'Salt held B. Next round when you click.');
   } else {
     rounds.state.score.tide = 3;
     rounds.state.score.salt = 1;

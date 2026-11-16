@@ -36,5 +36,13 @@ Controls: `WASD` move, mouse look, click fire, `R` reload, `Ctrl` crouch, `Space
 
 ## Screenshots
 
-`screenshots/` holds real renders of this code, taken from the game's own deterministic shot
-harness: the queries in `shots.json` pose the round, render two frames and stop.
+`screenshots/` holds four real renders of this code, taken from the game's own deterministic shot
+harness, all at 1280x720 and all of the same round: the queries in `shots.json` pose the round,
+render two frames, and stop.
+
+| File | The frame it poses |
+| --- | --- |
+| `1-fight.jpg` | The cover: a burst of fire down the west quay, the lit site board behind the defender |
+| `2-title.jpg` | The opening card, with the two squads already walking up the mid hall behind it |
+| `3-plant.jpg` | The charge planted at A, its state line in the HUD |
+| `4-lost.jpg` | The other ending, with Salt three rounds up and the next round a click away |
